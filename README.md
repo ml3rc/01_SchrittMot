@@ -10,7 +10,7 @@ controller for Stepmotor
 
 ## Initial Setup
 
-1. Put the [AVRdude](https://github.com/ml3rc/01_SchrittMot) tool into `C:\Program Files (x86)\Atmel\Studio\7.0\tools\` (correct the version number)
+1. Put the [AVRdude](https://github.com/ml3rc/01_SchrittMot/tree/main/readme/AVRdude) tool into `C:\Program Files (x86)\Atmel\Studio\7.0\tools\` (correct the version number)
 
 2. Correct the Paths and COM-port in `Microchip Studio > Project > 01_SchrittMot Properties... > Tool > Custom programming tool > Command` to match your repo location.
 
