@@ -20,11 +20,11 @@ After the Initial Setup you can build the project with `Start without debugging`
 
 ## State Event
 
-![Diagram-State-Event.drawio.svg](readme\State-Event.drawio.svg)
+![Diagram-State-Event.drawio.svg](./readme/State-Event.drawio.svg)
 
 ## Connection Diagramm
 
 The following connection diagramm is for a PICado ATmega 2560 board with a corresponding break-out-board and a stepper motor module containing a driver.
 
-![Diagram-HW-Connection.drawio.svg](readme\HW-Connection.drawio.svg)
+![Diagram-HW-Connection.drawio.svg](./readme/HW-Connection.drawio.svg)
 
