@@ -28,9 +28,9 @@
 #define OUT PORTC //first 4 bits
 
 //Max Min and Default Speed(delay)
-#define MIN_DELAY  4.5/LOOP_DELAY // 3.33 ms
+#define MIN_DELAY  3.3/LOOP_DELAY // 3.33 ms
 #define MAX_DELAY  500/LOOP_DELAY  // 50 ms
-#define DEF_DELAY 50/LOOP_DELAY
+#define DEF_DELAY 50/LOOP_DELAY	//20 steps per second as default
 
 //Speed change button values
 #define SPEED_CHANGE_PERCENTAGE 0.2 //percentage for low speeds
@@ -49,9 +49,13 @@ typedef enum{
 /** Constants **/
 const uint8_t STEPS[] = {
 		0b00001001,
+		0b00000001,
 		0b00000011,
+		0b00000010,
 		0b00000110,
-		0b00001100
+		0b00000100,
+		0b00001100,
+		0b00001000
 };
 
 const uint8_t NSTEPS = sizeof(STEPS) / sizeof(STEPS[0]); //len
