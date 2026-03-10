@@ -70,6 +70,8 @@ The following gif represents the inner working of the stepper motor, note the th
 
 A FSM(finite state machine) was chosen, because of the ease of documentation and implementation. For example when a new mode has to be added named `IDLE` it can just be added as a new state without much work.
 
+No interrupts were used, because of the simple nature of this project.
+
 The speed change feature was also added, because it's a easy function to add and it provides much more control over the stepper motor.
 
 If there are any questions why the solution was chosen like this, just ask.

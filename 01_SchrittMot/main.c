@@ -6,16 +6,16 @@
  * Project: StepMotor
  */ 
 
-/** Defines before Includes **/
+/********** Defines before Includes **********/
 #define F_CPU 16000000UL //cpu freq for delay
 
-/** Includes **/
+/********** Includes **********/
 #include <xc.h>
 #include <util/delay.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-/** Defines **/
+/********** Defines **********/
 //Direction Buttons
 #define B_DIRECTION_CLOCKWISE PA0
 #define B_DIRECTION_ANTICLOCKWISE PA1
@@ -37,16 +37,16 @@
 #define SPEED_CHANGE_MIN 0.2 //absolute value for high speeds
 
 //FSM loop delay
-#define LOOP_DELAY 0.5
+#define LOOP_DELAY 0.5 //0.5ms
 
-/** typedefs **/
+/********** typedefs **********/
 //FSM States
 typedef enum{
 	CLOCKWISE, ANTICLOKWISE, NONE
 } states_t;
 
 
-/** Constants **/
+/********** Constants **********/
 const uint8_t STEPS[] = {
 		0b00001001,
 		0b00000001,
@@ -61,7 +61,7 @@ const uint8_t STEPS[] = {
 const uint8_t NSTEPS = sizeof(STEPS) / sizeof(STEPS[0]); //len
 
 
-/** Helper Functions **/
+/********** Helper Functions **********/
 bool readPin(volatile uint8_t *pinReg, uint8_t pin) {
 	//read reg and mask bit
 	return (bool)(((*pinReg) & (1 << pin)) ? 1 : 0);
@@ -78,7 +78,7 @@ void InitIO(){
 	PORTC = 0x00; // init LOW
 }
 
-/** Main **/
+/********** Main **********/
 int main(void){
 	//Init
 	InitIO();
