@@ -2,12 +2,13 @@
  * main.c
  * Version: 1.0
  * Created: 2/23/2026 8:17:20 AM
- * Author: maell
+ * Last edit: See git
+ * Author: maell -> See git
  * Project: StepMotor
  */ 
 
 /********** Defines before Includes **********/
-#define F_CPU 16000000UL //cpu freq for delay
+#define F_CPU 16000000UL //cpu freq for delay -> has to be beforr includes because its used for delays
 
 /********** Includes **********/
 #include <xc.h>
@@ -25,7 +26,7 @@
 #define B_SPEEDDOWN PA6
 
 //Output ports
-#define OUT PORTC //first 4 bits
+#define OUT PORTC // first 4 bits
 
 //Max Min and Default Speed(delay)
 #define MIN_DELAY  3.3/LOOP_DELAY // 3.33 ms
@@ -37,7 +38,7 @@
 #define SPEED_CHANGE_MIN 0.2 //absolute value for high speeds
 
 //FSM loop delay
-#define LOOP_DELAY 0.5 //0.5ms
+#define LOOP_DELAY 0.1 //0.1ms Note: has to be tiny enougth to allow for the 3.33ms (3.4ms) delays
 
 /********** typedefs **********/
 //FSM States
@@ -62,19 +63,25 @@ const uint8_t NSTEPS = sizeof(STEPS) / sizeof(STEPS[0]); //len
 
 
 /********** Helper Functions **********/
+
+/***
+ * This function will take in the pointer to a Port and the pin number from 0-7 and it will return the bool of that pin
+ */
 bool readPin(volatile uint8_t *pinReg, uint8_t pin) {
 	//read reg and mask bit
 	return (bool)(((*pinReg) & (1 << pin)) ? 1 : 0);
 }
 
-
+/***
+ * This function will init the io's (PortA and PortC)
+ */
 void InitIO(){
 	// PORTA inputs for B_DIRECTION pins
-	DDRA = 0x00;
+	DDRA = 0x00; //input
 	PORTA = 0xFF; //pullup
 
 	// PORTC outputs for LEDs
-	DDRC = 0xFF;
+	DDRC = 0xFF; //output
 	PORTC = 0x00; // init LOW
 }
 
