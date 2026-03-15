@@ -5,10 +5,10 @@
  * Last edit: See git
  * Author: maell -> See git
  * Project: StepMotor
- */ 
+ */
 
 /********** Defines before Includes **********/
-#define F_CPU 16000000UL //cpu freq for delay -> has to be beforr includes because its used for delays
+#define F_CPU 16000000UL // CPU frequency for delay (must be before includes)
 
 /********** Includes **********/
 #include <xc.h>
@@ -17,167 +17,185 @@
 #include <stdint.h>
 
 /********** Defines **********/
-//Direction Buttons
-#define B_DIRECTION_CLOCKWISE PA0
-#define B_DIRECTION_ANTICLOCKWISE PA1
 
-//Speed Buttons
-#define B_SPEEDUP PA7
-#define B_SPEEDDOWN PA6
+// Direction buttons
+#define B_DIRECTION_CLOCKWISE      PA0
+#define B_DIRECTION_ANTICLOCKWISE  PA1
 
-//Output ports
-#define OUT PORTC // first 4 bits
+// Speed buttons
+#define B_SPEEDUP    PA7
+#define B_SPEEDDOWN  PA6
 
-//Max Min and Default Speed(delay)
-#define MIN_DELAY  3.3/LOOP_DELAY // 3.33 ms
-#define MAX_DELAY  500/LOOP_DELAY  // 50 ms
-#define DEF_DELAY 50/LOOP_DELAY	//20 steps per second as default
+// Output port
+#define OUT PORTC // first 4 bits used
 
-//Speed change button values
-#define SPEED_CHANGE_PERCENTAGE 0.2 //percentage for low speeds
-#define SPEED_CHANGE_MIN 0.2 //absolute value for high speeds
+// Max, min and default speed (delay)
+#define MIN_DELAY  3.3/LOOP_DELAY    // 3.33 ms
+#define MAX_DELAY  500/LOOP_DELAY    // 500 ms
+#define DEF_DELAY  50/LOOP_DELAY     // 20 steps per second default
 
-//FSM loop delay
-#define LOOP_DELAY 0.1 //0.1ms Note: has to be tiny enougth to allow for the 3.33ms (3.4ms) delays
+// Speed change parameters
+#define SPEED_CHANGE_PERCENTAGE 0.2   // percentage change for lower speeds
+#define SPEED_CHANGE_MIN        0.2   // absolute change for higher speeds
 
-/********** typedefs **********/
-//FSM States
-typedef enum{
-	CLOCKWISE, ANTICLOKWISE, NONE
+// FSM loop delay
+#define LOOP_DELAY 0.1 // 0.1 ms (must be small enough to allow 3.33 ms timing)
+
+/********** Typedefs **********/
+
+// FSM states
+typedef enum {
+    CLOCKWISE,
+    ANTICLOCKWISE,
+    NONE
 } states_t;
 
-
 /********** Constants **********/
+
 const uint8_t STEPS[] = {
-		0b00001001,
-		0b00000001,
-		0b00000011,
-		0b00000010,
-		0b00000110,
-		0b00000100,
-		0b00001100,
-		0b00001000
+    0b00001001,
+    0b00000001,
+    0b00000011,
+    0b00000010,
+    0b00000110,
+    0b00000100,
+    0b00001100,
+    0b00001000
 };
 
-const uint8_t NSTEPS = sizeof(STEPS) / sizeof(STEPS[0]); //len
-
+const uint8_t NSTEPS = sizeof(STEPS) / sizeof(STEPS[0]); // number of steps
 
 /********** Helper Functions **********/
 
-/***
- * This function will take in the pointer to a Port and the pin number from 0-7 and it will return the bool of that pin
+/*
+ * Reads a pin from a port register
+ * pinReg: pointer to register
+ * pin: pin number (0–7)
+ * returns: true if pin is HIGH
  */
 bool readPin(volatile uint8_t *pinReg, uint8_t pin) {
-	//read reg and mask bit
-	return (bool)(((*pinReg) & (1 << pin)) ? 1 : 0);
+    return (bool)(((*pinReg) & (1 << pin)) ? 1 : 0);
 }
 
-/***
- * This function will init the io's (PortA and PortC)
+/*
+ * Initialize IO ports (PORTA and PORTC)
  */
-void InitIO(){
-	// PORTA inputs for B_DIRECTION pins
-	DDRA = 0x00; //input
-	PORTA = 0xFF; //pullup
+void InitIO() {
 
-	// PORTC outputs for LEDs
-	DDRC = 0xFF; //output
-	PORTC = 0x00; // init LOW
+    // PORTA inputs for buttons
+    DDRA = 0x00;  // input
+    PORTA = 0xFF; // enable pullups
+
+    // PORTC outputs for motor driver
+    DDRC = 0xFF;  // output
+    PORTC = 0x00; // initialize LOW
 }
 
 /********** Main **********/
-int main(void){
-	//Init
-	InitIO();
-	
-	//Init vars
-	//current step
-	uint8_t currStep = 0;
-	
-	//button states
-	bool prevBDirClockwise = readPin(&PINA, B_DIRECTION_CLOCKWISE);
-	bool prevBDirAnticlockwise = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
-	bool prevBSpeedUp = readPin(&PINA, B_SPEEDUP);
-	bool prevBSpeedDown = readPin(&PINA, B_SPEEDDOWN);
-	
-	//fsm
-	states_t currState = CLOCKWISE; //default clockwise
-	uint16_t delayCounter = 0;
-	float speedDelay = DEF_DELAY;
-	
-	//general bool for button reads
-	bool curr;
-	
-    while(1){
-		//fsm loop delay
-		_delay_ms(LOOP_DELAY);
-		
-		switch(currState){
-			case CLOCKWISE:
-				//increase step
-				if(delayCounter++ >= speedDelay){
-					currStep = (currStep + 1) % NSTEPS;
-					delayCounter = 0;
-				}
-				
-			
-				//state switch on direction change
-				curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
-				if(prevBDirClockwise != curr && curr){
-					currState = ANTICLOKWISE;
-				}
-				prevBDirClockwise = curr;
-				
-				break;
-			case ANTICLOKWISE:
-				//decrease step
-				if(delayCounter++ >= speedDelay){
-					currStep = (currStep + NSTEPS - 1) % NSTEPS;
-					delayCounter = 0;
-				}
-				
-				
-				//state switch on direction change
-				curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
-				if(prevBDirAnticlockwise != curr && curr){
-					currState = CLOCKWISE;
-				}
-				prevBDirAnticlockwise = curr;
-				
-				break;
-			case NONE:
-				//repair state
-				currState = CLOCKWISE;
-				break;
-		}
-		// General code that need to run every time
-		// speed up
-		curr = readPin(&PINA, B_SPEEDUP);
-		if(prevBSpeedUp != curr && curr){
-			// subtract delay to speed up
-			speedDelay *= (1-SPEED_CHANGE_PERCENTAGE);
-			speedDelay -= SPEED_CHANGE_MIN;
-			//limit speed
-			if(speedDelay < MIN_DELAY){
-				speedDelay = MIN_DELAY;
-			}
-		}
-		prevBSpeedUp = curr;
-		
-		// speed down
-		curr = readPin(&PINA, B_SPEEDDOWN);
-		if(prevBSpeedDown != curr && curr){
-			//add delay to slow 
-			speedDelay *= (1+SPEED_CHANGE_PERCENTAGE);
-			speedDelay += SPEED_CHANGE_MIN;
-			//limit speed
-			if(speedDelay > MAX_DELAY){
-				speedDelay = MAX_DELAY;
-			}
-		}
-		prevBSpeedDown = curr;
 
-		// Update lower 4 bits of OUT
-		OUT = STEPS[currStep];
+int main(void) {
+
+    // Initialize hardware
+    InitIO();
+
+    // Current step
+    uint8_t currStep = 0;
+
+    // Previous button states
+    bool prevBDirClockwise     = readPin(&PINA, B_DIRECTION_CLOCKWISE);
+    bool prevBDirAnticlockwise = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
+    bool prevBSpeedUp          = readPin(&PINA, B_SPEEDUP);
+    bool prevBSpeedDown        = readPin(&PINA, B_SPEEDDOWN);
+
+    // FSM variables
+    states_t currState = CLOCKWISE; // default direction
+    uint16_t delayCounter = 0;
+    float speedDelay = DEF_DELAY;
+
+    // Temporary variable for button reads
+    bool curr;
+
+    while (1) {
+
+        // FSM loop delay
+        _delay_ms(LOOP_DELAY);
+
+        switch (currState) {
+
+            case CLOCKWISE:
+
+                // Increase step
+                if (delayCounter++ >= speedDelay) {
+                    currStep = (currStep + 1) % NSTEPS;
+                    delayCounter = 0;
+                }
+
+                // Direction change
+                curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
+                if (prevBDirClockwise != curr && curr) {
+                    currState = ANTICLOCKWISE;
+                }
+                prevBDirClockwise = curr;
+
+                break;
+
+            case ANTICLOCKWISE:
+
+                // Decrease step
+                if (delayCounter++ >= speedDelay) {
+                    currStep = (currStep + NSTEPS - 1) % NSTEPS;
+                    delayCounter = 0;
+                }
+
+                // Direction change
+                curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
+                if (prevBDirAnticlockwise != curr && curr) {
+                    currState = CLOCKWISE;
+                }
+                prevBDirAnticlockwise = curr;
+
+                break;
+
+            case NONE:
+
+                // Recovery state
+                currState = CLOCKWISE;
+                break;
+        }
+
+        /********** Code executed every loop **********/
+
+        // Speed up
+        curr = readPin(&PINA, B_SPEEDUP);
+        if (prevBSpeedUp != curr && curr) {
+
+            // Reduce delay to increase speed
+            speedDelay *= (1 - SPEED_CHANGE_PERCENTAGE);
+            speedDelay -= SPEED_CHANGE_MIN;
+
+            // Limit speed
+            if (speedDelay < MIN_DELAY) {
+                speedDelay = MIN_DELAY;
+            }
+        }
+        prevBSpeedUp = curr;
+
+        // Slow down
+        curr = readPin(&PINA, B_SPEEDDOWN);
+        if (prevBSpeedDown != curr && curr) {
+
+            // Increase delay
+            speedDelay *= (1 + SPEED_CHANGE_PERCENTAGE);
+            speedDelay += SPEED_CHANGE_MIN;
+
+            // Limit speed
+            if (speedDelay > MAX_DELAY) {
+                speedDelay = MAX_DELAY;
+            }
+        }
+        prevBSpeedDown = curr;
+
+        // Output step pattern
+        OUT = STEPS[currStep];
     }
 }
