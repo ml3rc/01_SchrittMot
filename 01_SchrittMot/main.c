@@ -131,14 +131,13 @@ int main(void) {
                 }
 
                 // Direction change
-                curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
-                if (prevBDirClockwise != curr && curr) {
+                curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
+                if (prevBDirAnticlockwise != curr && curr) {
                     currState = ANTICLOCKWISE;
                 }
-                prevBDirClockwise = curr;
+                prevBDirAnticlockwise = curr;
 
                 break;
-
             case ANTICLOCKWISE:
 
                 // Decrease step
@@ -148,14 +147,13 @@ int main(void) {
                 }
 
                 // Direction change
-                curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
-                if (prevBDirAnticlockwise != curr && curr) {
+				curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
+                if (prevBDirClockwise != curr && curr) {
                     currState = CLOCKWISE;
                 }
-                prevBDirAnticlockwise = curr;
+                prevBDirClockwise = curr;
 
                 break;
-
             case NONE:
 
                 // Recovery state
