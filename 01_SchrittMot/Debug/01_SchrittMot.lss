@@ -13,11 +13,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY
   4 .debug_aranges 00000030  00000000  00000000  00000803  2**0
                   CONTENTS, READONLY, DEBUGGING
-  5 .debug_info   00001191  00000000  00000000  00000833  2**0
+  5 .debug_info   00001192  00000000  00000000  00000833  2**0
                   CONTENTS, READONLY, DEBUGGING
-  6 .debug_abbrev 00000caf  00000000  00000000  000019c4  2**0
+  6 .debug_abbrev 00000caf  00000000  00000000  000019c5  2**0
                   CONTENTS, READONLY, DEBUGGING
-  7 .debug_line   0000044e  00000000  00000000  00002673  2**0
+  7 .debug_line   0000044d  00000000  00000000  00002674  2**0
                   CONTENTS, READONLY, DEBUGGING
   8 .debug_frame  00000044  00000000  00000000  00002ac4  2**2
                   CONTENTS, READONLY, DEBUGGING
@@ -169,12 +169,12 @@ Disassembly of section .text:
 Disassembly of section .text.readPin:
 
 000005d0 <readPin>:
-
-
-/** Helper Functions **/
+ * pinReg: pointer to register
+ * pin: pin number (0–7)
+ * returns: true if pin is HIGH
+ */
 bool readPin(volatile uint8_t *pinReg, uint8_t pin) {
-	//read reg and mask bit
-	return (bool)(((*pinReg) & (1 << pin)) ? 1 : 0);
+    return (bool)(((*pinReg) & (1 << pin)) ? 1 : 0);
  5d0:	fc 01       	movw	r30, r24
  5d2:	80 81       	ld	r24, Z
  5d4:	90 e0       	ldi	r25, 0x00	; 0
@@ -190,96 +190,97 @@ bool readPin(volatile uint8_t *pinReg, uint8_t pin) {
 Disassembly of section .text.InitIO:
 
 0000062a <InitIO>:
+ * Initialize IO ports (PORTA and PORTC)
+ */
+void InitIO() {
 
-
-void InitIO(){
-	// PORTA inputs for B_DIRECTION pins
-	DDRA = 0x00;
+    // PORTA inputs for buttons
+    DDRA = 0x00;  // input
  62a:	11 b8       	out	0x01, r1	; 1
-	PORTA = 0xFF; //pullup
+    PORTA = 0xFF; // enable pullups
  62c:	8f ef       	ldi	r24, 0xFF	; 255
  62e:	82 b9       	out	0x02, r24	; 2
 
-	// PORTC outputs for LEDs
-	DDRC = 0xFF;
+    // PORTC outputs for motor driver
+    DDRC = 0xFF;  // output
  630:	87 b9       	out	0x07, r24	; 7
-	PORTC = 0x00; // init LOW
+    PORTC = 0x00; // initialize LOW
  632:	18 b8       	out	0x08, r1	; 8
  634:	08 95       	ret
 
 Disassembly of section .text.main:
 
 00000108 <main>:
-}
+/********** Main **********/
 
-/** Main **/
-int main(void){
-	//Init
-	InitIO();
+int main(void) {
+
+    // Initialize hardware
+    InitIO();
  108:	0e 94 15 03 	call	0x62a	; 0x62a <InitIO>
-	//Init vars
-	//current step
-	uint8_t currStep = 0;
-	
-	//button states
-	bool prevBDirClockwise = readPin(&PINA, B_DIRECTION_CLOCKWISE);
+
+    // Current step
+    uint8_t currStep = 0;
+
+    // Previous button states
+    bool prevBDirClockwise     = readPin(&PINA, B_DIRECTION_CLOCKWISE);
  10c:	60 e0       	ldi	r22, 0x00	; 0
  10e:	80 e2       	ldi	r24, 0x20	; 32
  110:	90 e0       	ldi	r25, 0x00	; 0
  112:	0e 94 e8 02 	call	0x5d0	; 0x5d0 <readPin>
  116:	88 2e       	mov	r8, r24
-	bool prevBDirAnticlockwise = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
+    bool prevBDirAnticlockwise = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
  118:	61 e0       	ldi	r22, 0x01	; 1
  11a:	80 e2       	ldi	r24, 0x20	; 32
  11c:	90 e0       	ldi	r25, 0x00	; 0
  11e:	0e 94 e8 02 	call	0x5d0	; 0x5d0 <readPin>
  122:	98 2e       	mov	r9, r24
-	bool prevBSpeedUp = readPin(&PINA, B_SPEEDUP);
+    bool prevBSpeedUp          = readPin(&PINA, B_SPEEDUP);
  124:	67 e0       	ldi	r22, 0x07	; 7
  126:	80 e2       	ldi	r24, 0x20	; 32
  128:	90 e0       	ldi	r25, 0x00	; 0
  12a:	0e 94 e8 02 	call	0x5d0	; 0x5d0 <readPin>
  12e:	68 2e       	mov	r6, r24
-	bool prevBSpeedDown = readPin(&PINA, B_SPEEDDOWN);
+    bool prevBSpeedDown        = readPin(&PINA, B_SPEEDDOWN);
  130:	66 e0       	ldi	r22, 0x06	; 6
  132:	80 e2       	ldi	r24, 0x20	; 32
  134:	90 e0       	ldi	r25, 0x00	; 0
  136:	0e 94 e8 02 	call	0x5d0	; 0x5d0 <readPin>
  13a:	78 2e       	mov	r7, r24
-	
-	//fsm
-	states_t currState = CLOCKWISE; //default clockwise
-	uint16_t delayCounter = 0;
-	float speedDelay = DEF_DELAY;
+
+    // FSM variables
+    states_t currState = CLOCKWISE; // default direction
+    uint16_t delayCounter = 0;
+    float speedDelay = DEF_DELAY;
  13c:	0f 2e       	mov	r0, r31
  13e:	c1 2c       	mov	r12, r1
  140:	d1 2c       	mov	r13, r1
- 142:	f8 ec       	ldi	r31, 0xC8	; 200
+ 142:	fa ef       	ldi	r31, 0xFA	; 250
  144:	ef 2e       	mov	r14, r31
- 146:	f2 e4       	ldi	r31, 0x42	; 66
+ 146:	f3 e4       	ldi	r31, 0x43	; 67
  148:	ff 2e       	mov	r15, r31
  14a:	f0 2d       	mov	r31, r0
-	bool prevBSpeedUp = readPin(&PINA, B_SPEEDUP);
-	bool prevBSpeedDown = readPin(&PINA, B_SPEEDDOWN);
-	
-	//fsm
-	states_t currState = CLOCKWISE; //default clockwise
-	uint16_t delayCounter = 0;
+    bool prevBSpeedUp          = readPin(&PINA, B_SPEEDUP);
+    bool prevBSpeedDown        = readPin(&PINA, B_SPEEDDOWN);
+
+    // FSM variables
+    states_t currState = CLOCKWISE; // default direction
+    uint16_t delayCounter = 0;
  14c:	00 e0       	ldi	r16, 0x00	; 0
  14e:	10 e0       	ldi	r17, 0x00	; 0
-	bool prevBDirAnticlockwise = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
-	bool prevBSpeedUp = readPin(&PINA, B_SPEEDUP);
-	bool prevBSpeedDown = readPin(&PINA, B_SPEEDDOWN);
-	
-	//fsm
-	states_t currState = CLOCKWISE; //default clockwise
+    bool prevBDirAnticlockwise = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
+    bool prevBSpeedUp          = readPin(&PINA, B_SPEEDUP);
+    bool prevBSpeedDown        = readPin(&PINA, B_SPEEDDOWN);
+
+    // FSM variables
+    states_t currState = CLOCKWISE; // default direction
  150:	d0 e0       	ldi	r29, 0x00	; 0
-	//Init
-	InitIO();
-	
-	//Init vars
-	//current step
-	uint8_t currStep = 0;
+
+    // Initialize hardware
+    InitIO();
+
+    // Current step
+    uint8_t currStep = 0;
  152:	c0 e0       	ldi	r28, 0x00	; 0
 	#else
 		//round up by default
@@ -287,25 +288,27 @@ int main(void){
 	#endif
 
 	__builtin_avr_delay_cycles(__ticks_dc);
- 154:	8f ec       	ldi	r24, 0xCF	; 207
- 156:	97 e0       	ldi	r25, 0x07	; 7
+ 154:	8f e8       	ldi	r24, 0x8F	; 143
+ 156:	91 e0       	ldi	r25, 0x01	; 1
  158:	01 97       	sbiw	r24, 0x01	; 1
  15a:	f1 f7       	brne	.-4      	; 0x158 <main+0x50>
  15c:	00 c0       	rjmp	.+0      	; 0x15e <main+0x56>
  15e:	00 00       	nop
-	
-    while(1){
-		//fsm loop delay
-		_delay_ms(LOOP_DELAY);
-		
-		switch(currState){
+    while (1) {
+
+        // FSM loop delay
+        _delay_ms(LOOP_DELAY);
+
+        switch (currState) {
  160:	d1 30       	cpi	r29, 0x01	; 1
  162:	71 f1       	breq	.+92     	; 0x1c0 <main+0xb8>
  164:	08 f0       	brcs	.+2      	; 0x168 <main+0x60>
  166:	61 c0       	rjmp	.+194    	; 0x22a <main+0x122>
-			case CLOCKWISE:
-				//increase step
-				if(delayCounter++ >= speedDelay){
+
+            case CLOCKWISE:
+
+                // Increase step
+                if (delayCounter++ >= speedDelay) {
  168:	58 01       	movw	r10, r16
  16a:	9f ef       	ldi	r25, 0xFF	; 255
  16c:	a9 1a       	sub	r10, r25
@@ -321,7 +324,7 @@ int main(void){
  182:	0e 94 21 03 	call	0x642	; 0x642 <__cmpsf2>
  186:	18 16       	cp	r1, r24
  188:	7c f0       	brlt	.+30     	; 0x1a8 <main+0xa0>
-					currStep = (currStep + 1) % NSTEPS;
+                    currStep = (currStep + 1) % NSTEPS;
  18a:	8c 2f       	mov	r24, r28
  18c:	90 e0       	ldi	r25, 0x00	; 0
  18e:	01 96       	adiw	r24, 0x01	; 1
@@ -334,42 +337,43 @@ int main(void){
  19c:	9f 6f       	ori	r25, 0xFF	; 255
  19e:	01 96       	adiw	r24, 0x01	; 1
  1a0:	c8 2f       	mov	r28, r24
-					delayCounter = 0;
+                    delayCounter = 0;
  1a2:	00 e0       	ldi	r16, 0x00	; 0
  1a4:	10 e0       	ldi	r17, 0x00	; 0
  1a6:	01 c0       	rjmp	.+2      	; 0x1aa <main+0xa2>
-		_delay_ms(LOOP_DELAY);
-		
-		switch(currState){
-			case CLOCKWISE:
-				//increase step
-				if(delayCounter++ >= speedDelay){
+        switch (currState) {
+
+            case CLOCKWISE:
+
+                // Increase step
+                if (delayCounter++ >= speedDelay) {
  1a8:	85 01       	movw	r16, r10
-					delayCounter = 0;
-				}
-				
-			
-				//state switch on direction change
-				curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
- 1aa:	60 e0       	ldi	r22, 0x00	; 0
+                    currStep = (currStep + 1) % NSTEPS;
+                    delayCounter = 0;
+                }
+
+                // Direction change
+                curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
+ 1aa:	61 e0       	ldi	r22, 0x01	; 1
  1ac:	80 e2       	ldi	r24, 0x20	; 32
  1ae:	90 e0       	ldi	r25, 0x00	; 0
  1b0:	0e 94 e8 02 	call	0x5d0	; 0x5d0 <readPin>
-				if(prevBDirClockwise != curr && curr){
- 1b4:	88 16       	cp	r8, r24
+                if (prevBDirAnticlockwise != curr && curr) {
+ 1b4:	98 16       	cp	r9, r24
  1b6:	81 f1       	breq	.+96     	; 0x218 <main+0x110>
  1b8:	81 11       	cpse	r24, r1
  1ba:	30 c0       	rjmp	.+96     	; 0x21c <main+0x114>
-					currState = ANTICLOKWISE;
-				}
-				prevBDirClockwise = curr;
- 1bc:	88 2e       	mov	r8, r24
+                    currState = ANTICLOCKWISE;
+                }
+                prevBDirAnticlockwise = curr;
+ 1bc:	98 2e       	mov	r9, r24
  1be:	35 c0       	rjmp	.+106    	; 0x22a <main+0x122>
-				
-				break;
-			case ANTICLOKWISE:
-				//decrease step
-				if(delayCounter++ >= speedDelay){
+
+                break;
+            case ANTICLOCKWISE:
+
+                // Decrease step
+                if (delayCounter++ >= speedDelay) {
  1c0:	58 01       	movw	r10, r16
  1c2:	8f ef       	ldi	r24, 0xFF	; 255
  1c4:	a8 1a       	sub	r10, r24
@@ -385,7 +389,7 @@ int main(void){
  1da:	0e 94 21 03 	call	0x642	; 0x642 <__cmpsf2>
  1de:	18 16       	cp	r1, r24
  1e0:	7c f0       	brlt	.+30     	; 0x200 <main+0xf8>
-					currStep = (currStep + NSTEPS - 1) % NSTEPS;
+                    currStep = (currStep + NSTEPS - 1) % NSTEPS;
  1e2:	8c 2f       	mov	r24, r28
  1e4:	90 e0       	ldi	r25, 0x00	; 0
  1e6:	07 96       	adiw	r24, 0x07	; 7
@@ -398,88 +402,89 @@ int main(void){
  1f4:	9f 6f       	ori	r25, 0xFF	; 255
  1f6:	01 96       	adiw	r24, 0x01	; 1
  1f8:	c8 2f       	mov	r28, r24
-					delayCounter = 0;
+                    delayCounter = 0;
  1fa:	00 e0       	ldi	r16, 0x00	; 0
  1fc:	10 e0       	ldi	r17, 0x00	; 0
  1fe:	01 c0       	rjmp	.+2      	; 0x202 <main+0xfa>
-				prevBDirClockwise = curr;
-				
-				break;
-			case ANTICLOKWISE:
-				//decrease step
-				if(delayCounter++ >= speedDelay){
+
+                break;
+            case ANTICLOCKWISE:
+
+                // Decrease step
+                if (delayCounter++ >= speedDelay) {
  200:	85 01       	movw	r16, r10
-					delayCounter = 0;
-				}
-				
-				
-				//state switch on direction change
-				curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
- 202:	61 e0       	ldi	r22, 0x01	; 1
+                    currStep = (currStep + NSTEPS - 1) % NSTEPS;
+                    delayCounter = 0;
+                }
+
+                // Direction change
+				curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
+ 202:	60 e0       	ldi	r22, 0x00	; 0
  204:	80 e2       	ldi	r24, 0x20	; 32
  206:	90 e0       	ldi	r25, 0x00	; 0
  208:	0e 94 e8 02 	call	0x5d0	; 0x5d0 <readPin>
-				if(prevBDirAnticlockwise != curr && curr){
- 20c:	98 16       	cp	r9, r24
+                if (prevBDirClockwise != curr && curr) {
+ 20c:	88 16       	cp	r8, r24
  20e:	49 f0       	breq	.+18     	; 0x222 <main+0x11a>
  210:	81 11       	cpse	r24, r1
  212:	09 c0       	rjmp	.+18     	; 0x226 <main+0x11e>
-					currState = CLOCKWISE;
-				}
-				prevBDirAnticlockwise = curr;
- 214:	98 2e       	mov	r9, r24
+                    currState = CLOCKWISE;
+                }
+                prevBDirClockwise = curr;
+ 214:	88 2e       	mov	r8, r24
  216:	09 c0       	rjmp	.+18     	; 0x22a <main+0x122>
-				//state switch on direction change
-				curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
-				if(prevBDirClockwise != curr && curr){
-					currState = ANTICLOKWISE;
-				}
-				prevBDirClockwise = curr;
- 218:	88 2e       	mov	r8, r24
+                // Direction change
+                curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
+                if (prevBDirAnticlockwise != curr && curr) {
+                    currState = ANTICLOCKWISE;
+                }
+                prevBDirAnticlockwise = curr;
+ 218:	98 2e       	mov	r9, r24
  21a:	07 c0       	rjmp	.+14     	; 0x22a <main+0x122>
- 21c:	88 2e       	mov	r8, r24
-				
-			
-				//state switch on direction change
-				curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
-				if(prevBDirClockwise != curr && curr){
-					currState = ANTICLOKWISE;
+ 21c:	98 2e       	mov	r9, r24
+                }
+
+                // Direction change
+                curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
+                if (prevBDirAnticlockwise != curr && curr) {
+                    currState = ANTICLOCKWISE;
  21e:	d1 e0       	ldi	r29, 0x01	; 1
  220:	04 c0       	rjmp	.+8      	; 0x22a <main+0x122>
-				//state switch on direction change
-				curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
-				if(prevBDirAnticlockwise != curr && curr){
-					currState = CLOCKWISE;
-				}
-				prevBDirAnticlockwise = curr;
- 222:	98 2e       	mov	r9, r24
+                // Direction change
+				curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
+                if (prevBDirClockwise != curr && curr) {
+                    currState = CLOCKWISE;
+                }
+                prevBDirClockwise = curr;
+ 222:	88 2e       	mov	r8, r24
  224:	02 c0       	rjmp	.+4      	; 0x22a <main+0x122>
- 226:	98 2e       	mov	r9, r24
-				
-				
-				//state switch on direction change
-				curr = readPin(&PINA, B_DIRECTION_ANTICLOCKWISE);
-				if(prevBDirAnticlockwise != curr && curr){
-					currState = CLOCKWISE;
+ 226:	88 2e       	mov	r8, r24
+                }
+
+                // Direction change
+				curr = readPin(&PINA, B_DIRECTION_CLOCKWISE);
+                if (prevBDirClockwise != curr && curr) {
+                    currState = CLOCKWISE;
  228:	d0 e0       	ldi	r29, 0x00	; 0
-				currState = CLOCKWISE;
-				break;
-		}
-		// General code that need to run every time
-		// speed up
-		curr = readPin(&PINA, B_SPEEDUP);
+        }
+
+        /********** Code executed every loop **********/
+
+        // Speed up
+        curr = readPin(&PINA, B_SPEEDUP);
  22a:	67 e0       	ldi	r22, 0x07	; 7
  22c:	80 e2       	ldi	r24, 0x20	; 32
  22e:	90 e0       	ldi	r25, 0x00	; 0
  230:	0e 94 e8 02 	call	0x5d0	; 0x5d0 <readPin>
  234:	b8 2e       	mov	r11, r24
-		if(prevBSpeedUp != curr && curr){
+        if (prevBSpeedUp != curr && curr) {
  236:	68 16       	cp	r6, r24
- 238:	19 f1       	breq	.+70     	; 0x280 <main+0x178>
+ 238:	11 f1       	breq	.+68     	; 0x27e <main+0x176>
  23a:	88 23       	and	r24, r24
- 23c:	09 f1       	breq	.+66     	; 0x280 <main+0x178>
-			// subtract delay to speed up
-			speedDelay *= (1-SPEED_CHANGE_PERCENTAGE);
+ 23c:	01 f1       	breq	.+64     	; 0x27e <main+0x176>
+
+            // Reduce delay to increase speed
+            speedDelay *= (1 - SPEED_CHANGE_PERCENTAGE);
  23e:	2d ec       	ldi	r18, 0xCD	; 205
  240:	3c ec       	ldi	r19, 0xCC	; 204
  242:	4c e4       	ldi	r20, 0x4C	; 76
@@ -487,7 +492,7 @@ int main(void){
  246:	c7 01       	movw	r24, r14
  248:	b6 01       	movw	r22, r12
  24a:	0e 94 2b 03 	call	0x656	; 0x656 <__mulsf3>
-			speedDelay -= SPEED_CHANGE_MIN;
+            speedDelay -= SPEED_CHANGE_MIN;
  24e:	2d ec       	ldi	r18, 0xCD	; 205
  250:	3c ec       	ldi	r19, 0xCC	; 204
  252:	4c e4       	ldi	r20, 0x4C	; 76
@@ -495,82 +500,85 @@ int main(void){
  256:	0e 94 f2 02 	call	0x5e4	; 0x5e4 <__subsf3>
  25a:	6b 01       	movw	r12, r22
  25c:	7c 01       	movw	r14, r24
-			//limit speed
-			if(speedDelay < MIN_DELAY){
- 25e:	23 e3       	ldi	r18, 0x33	; 51
- 260:	33 e3       	ldi	r19, 0x33	; 51
- 262:	43 ed       	ldi	r20, 0xD3	; 211
- 264:	50 e4       	ldi	r21, 0x40	; 64
+
+            // Limit speed
+            if (speedDelay < MIN_DELAY) {
+ 25e:	20 e0       	ldi	r18, 0x00	; 0
+ 260:	30 e0       	ldi	r19, 0x00	; 0
+ 262:	44 e0       	ldi	r20, 0x04	; 4
+ 264:	52 e4       	ldi	r21, 0x42	; 66
  266:	0e 94 21 03 	call	0x642	; 0x642 <__cmpsf2>
  26a:	88 23       	and	r24, r24
- 26c:	4c f4       	brge	.+18     	; 0x280 <main+0x178>
-				speedDelay = MIN_DELAY;
+ 26c:	44 f4       	brge	.+16     	; 0x27e <main+0x176>
+                speedDelay = MIN_DELAY;
  26e:	0f 2e       	mov	r0, r31
- 270:	f3 e3       	ldi	r31, 0x33	; 51
- 272:	cf 2e       	mov	r12, r31
- 274:	dc 2c       	mov	r13, r12
- 276:	f3 ed       	ldi	r31, 0xD3	; 211
- 278:	ef 2e       	mov	r14, r31
- 27a:	f0 e4       	ldi	r31, 0x40	; 64
- 27c:	ff 2e       	mov	r15, r31
- 27e:	f0 2d       	mov	r31, r0
-			}
-		}
-		prevBSpeedUp = curr;
-		
-		// speed down
-		curr = readPin(&PINA, B_SPEEDDOWN);
- 280:	66 e0       	ldi	r22, 0x06	; 6
- 282:	80 e2       	ldi	r24, 0x20	; 32
- 284:	90 e0       	ldi	r25, 0x00	; 0
- 286:	0e 94 e8 02 	call	0x5d0	; 0x5d0 <readPin>
- 28a:	a8 2e       	mov	r10, r24
-		if(prevBSpeedDown != curr && curr){
- 28c:	78 16       	cp	r7, r24
- 28e:	11 f1       	breq	.+68     	; 0x2d4 <main+0x1cc>
- 290:	88 23       	and	r24, r24
- 292:	01 f1       	breq	.+64     	; 0x2d4 <main+0x1cc>
-			//add delay to slow 
-			speedDelay *= (1+SPEED_CHANGE_PERCENTAGE);
- 294:	2a e9       	ldi	r18, 0x9A	; 154
- 296:	39 e9       	ldi	r19, 0x99	; 153
- 298:	49 e9       	ldi	r20, 0x99	; 153
- 29a:	5f e3       	ldi	r21, 0x3F	; 63
- 29c:	c7 01       	movw	r24, r14
- 29e:	b6 01       	movw	r22, r12
- 2a0:	0e 94 2b 03 	call	0x656	; 0x656 <__mulsf3>
-			speedDelay += SPEED_CHANGE_MIN;
- 2a4:	2d ec       	ldi	r18, 0xCD	; 205
- 2a6:	3c ec       	ldi	r19, 0xCC	; 204
- 2a8:	4c e4       	ldi	r20, 0x4C	; 76
- 2aa:	5e e3       	ldi	r21, 0x3E	; 62
- 2ac:	0e 94 f3 02 	call	0x5e6	; 0x5e6 <__addsf3>
- 2b0:	6b 01       	movw	r12, r22
- 2b2:	7c 01       	movw	r14, r24
-			//limit speed
-			if(speedDelay > MAX_DELAY){
- 2b4:	20 e0       	ldi	r18, 0x00	; 0
- 2b6:	30 e0       	ldi	r19, 0x00	; 0
- 2b8:	4a e7       	ldi	r20, 0x7A	; 122
- 2ba:	54 e4       	ldi	r21, 0x44	; 68
- 2bc:	0e 94 26 03 	call	0x64c	; 0x64c <__gesf2>
- 2c0:	18 16       	cp	r1, r24
- 2c2:	44 f4       	brge	.+16     	; 0x2d4 <main+0x1cc>
-				speedDelay = MAX_DELAY;
- 2c4:	0f 2e       	mov	r0, r31
- 2c6:	c1 2c       	mov	r12, r1
- 2c8:	d1 2c       	mov	r13, r1
- 2ca:	fa e7       	ldi	r31, 0x7A	; 122
+ 270:	c1 2c       	mov	r12, r1
+ 272:	d1 2c       	mov	r13, r1
+ 274:	f4 e0       	ldi	r31, 0x04	; 4
+ 276:	ef 2e       	mov	r14, r31
+ 278:	f2 e4       	ldi	r31, 0x42	; 66
+ 27a:	ff 2e       	mov	r15, r31
+ 27c:	f0 2d       	mov	r31, r0
+            }
+        }
+        prevBSpeedUp = curr;
+
+        // Slow down
+        curr = readPin(&PINA, B_SPEEDDOWN);
+ 27e:	66 e0       	ldi	r22, 0x06	; 6
+ 280:	80 e2       	ldi	r24, 0x20	; 32
+ 282:	90 e0       	ldi	r25, 0x00	; 0
+ 284:	0e 94 e8 02 	call	0x5d0	; 0x5d0 <readPin>
+ 288:	a8 2e       	mov	r10, r24
+        if (prevBSpeedDown != curr && curr) {
+ 28a:	78 16       	cp	r7, r24
+ 28c:	19 f1       	breq	.+70     	; 0x2d4 <main+0x1cc>
+ 28e:	88 23       	and	r24, r24
+ 290:	09 f1       	breq	.+66     	; 0x2d4 <main+0x1cc>
+
+            // Increase delay
+            speedDelay *= (1 + SPEED_CHANGE_PERCENTAGE);
+ 292:	2a e9       	ldi	r18, 0x9A	; 154
+ 294:	39 e9       	ldi	r19, 0x99	; 153
+ 296:	49 e9       	ldi	r20, 0x99	; 153
+ 298:	5f e3       	ldi	r21, 0x3F	; 63
+ 29a:	c7 01       	movw	r24, r14
+ 29c:	b6 01       	movw	r22, r12
+ 29e:	0e 94 2b 03 	call	0x656	; 0x656 <__mulsf3>
+            speedDelay += SPEED_CHANGE_MIN;
+ 2a2:	2d ec       	ldi	r18, 0xCD	; 205
+ 2a4:	3c ec       	ldi	r19, 0xCC	; 204
+ 2a6:	4c e4       	ldi	r20, 0x4C	; 76
+ 2a8:	5e e3       	ldi	r21, 0x3E	; 62
+ 2aa:	0e 94 f3 02 	call	0x5e6	; 0x5e6 <__addsf3>
+ 2ae:	6b 01       	movw	r12, r22
+ 2b0:	7c 01       	movw	r14, r24
+
+            // Limit speed
+            if (speedDelay > MAX_DELAY) {
+ 2b2:	20 e0       	ldi	r18, 0x00	; 0
+ 2b4:	30 e4       	ldi	r19, 0x40	; 64
+ 2b6:	4c e9       	ldi	r20, 0x9C	; 156
+ 2b8:	55 e4       	ldi	r21, 0x45	; 69
+ 2ba:	0e 94 26 03 	call	0x64c	; 0x64c <__gesf2>
+ 2be:	18 16       	cp	r1, r24
+ 2c0:	4c f4       	brge	.+18     	; 0x2d4 <main+0x1cc>
+                speedDelay = MAX_DELAY;
+ 2c2:	0f 2e       	mov	r0, r31
+ 2c4:	c1 2c       	mov	r12, r1
+ 2c6:	f0 e4       	ldi	r31, 0x40	; 64
+ 2c8:	df 2e       	mov	r13, r31
+ 2ca:	fc e9       	ldi	r31, 0x9C	; 156
  2cc:	ef 2e       	mov	r14, r31
- 2ce:	f4 e4       	ldi	r31, 0x44	; 68
+ 2ce:	f5 e4       	ldi	r31, 0x45	; 69
  2d0:	ff 2e       	mov	r15, r31
  2d2:	f0 2d       	mov	r31, r0
-			}
-		}
-		prevBSpeedDown = curr;
+            }
+        }
+        prevBSpeedDown = curr;
 
-		// Update lower 4 bits of OUT
-		OUT = STEPS[currStep];
+        // Output step pattern
+        OUT = STEPS[currStep];
  2d4:	8c 2f       	mov	r24, r28
  2d6:	90 e0       	ldi	r25, 0x00	; 0
  2d8:	a0 e0       	ldi	r26, 0x00	; 0
@@ -581,25 +589,25 @@ int main(void){
  2e2:	5a 2f       	mov	r21, r26
  2e4:	0e 94 0e 03 	call	0x61c	; 0x61c <__xload_1>
  2e8:	68 b9       	out	0x08, r22	; 8
-			//limit speed
-			if(speedDelay > MAX_DELAY){
-				speedDelay = MAX_DELAY;
-			}
-		}
-		prevBSpeedDown = curr;
+            // Limit speed
+            if (speedDelay > MAX_DELAY) {
+                speedDelay = MAX_DELAY;
+            }
+        }
+        prevBSpeedDown = curr;
  2ea:	7a 2c       	mov	r7, r10
-			//limit speed
-			if(speedDelay < MIN_DELAY){
-				speedDelay = MIN_DELAY;
-			}
-		}
-		prevBSpeedUp = curr;
+            // Limit speed
+            if (speedDelay < MIN_DELAY) {
+                speedDelay = MIN_DELAY;
+            }
+        }
+        prevBSpeedUp = curr;
  2ec:	6b 2c       	mov	r6, r11
-		}
-		prevBSpeedDown = curr;
+        }
+        prevBSpeedDown = curr;
 
-		// Update lower 4 bits of OUT
-		OUT = STEPS[currStep];
+        // Output step pattern
+        OUT = STEPS[currStep];
     }
  2ee:	32 cf       	rjmp	.-412    	; 0x154 <main+0x4c>
 
