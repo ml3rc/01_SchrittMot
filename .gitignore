@@ -57,3 +57,18 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# IDE / user-specific and sensitive files
+.vscode/
+.vs/
+.idea/
+*.code-workspace
+*.suo
+*.user
+*.atsuo
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
